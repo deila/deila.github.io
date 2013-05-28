@@ -1,0 +1,89 @@
+!!!
+html
+	head
+		link(href="style.css", rel="stylesheet", type="text/css")
+		script(src="jquery.js")
+		script(src="ko.js")
+		script(src="translations.js")
+		script(src="data.js")
+	body(style="display: none;")
+		title(data-bind="text: title")
+		.navbar
+			.navbar-inner
+				.container-fluid
+					a.brand(href="#!/", data-bind="text: title")
+					ul.nav(data-bind="foreach: navigation().menu")
+						li(data-bind="attr: { class: active }")
+							a(data-bind="text: title, attr: { href: route }")
+					ul.nav.pull-right(data-bind="foreach: navigation().right_menu")
+						li(data-bind="attr: { class: active }")
+							a(data-bind="text: title, attr: { href: route }")
+
+		.container-fluid
+			.row
+				.span12
+					button.btn(data-bind="i18n: 'sections', click: enableSections, visible: !sectionsActive()")
+					.well#sections(data-bind="visible: sectionsActive")
+						button.btn.btn-well(data-bind="i18n: 'sections', click: disableSections")
+						div(data-bind="buttonFilter: { data: data.sections, target: sectionFilter, all: true }")
+							.row-fluid(data-bind="foreach: foreach_by(data.sections, 3)")
+								.btn-group(data-bind="foreach: $data")
+									button.btn(data-bind="i18n: $data, attr: { class: active($data) }, click: toggle($data)")
+			hr
+
+
+			// ko if: rootView()
+			.hide(data-bind="do: enableSections")
+			// /ko
+
+			// ko route: "^#!/top$"
+			// ko if: matches
+			.hide(data-bind="do: disableSections")
+			| top
+			// /ko
+			// /ko
+
+			// ko route: "^#!/authors"
+			// ko if: matches
+			.hide(data-bind="do: disableSections")
+			.row-fluid
+				.span3.well
+					ul.nav.nav-list
+						li.nav-header(data-bind="i18n: 'authors'")
+						// ko foreach: data.authors
+						li
+							a(data-bind="text: $data, attr: { href: $parent.authorHref($index) }")
+						// /ko
+				.span9
+					// ko route: "^#!/authors/:id$"
+					// ko if: matches
+					h3(data-bind="text: data.authors[id()]")
+					table.table.table-striped
+						thead
+							th(data-bind="i18n: book_title")
+							th(data-bind="i18n: section")
+							th(data-bind="i18n: author")
+							th(data-bind="i18n: actions")
+						tbody(data-bind="foreach: data.books")
+							// ko if: author == $parent.data.authors[$parent.id()]
+							tr
+								td
+							// /ko
+
+					// /ko
+					// ko ifnot: matches
+					em(data-bind="i18n: 'choose_author_please'")
+					// /ko
+					// /ko
+			// /ko
+			// /ko
+
+			// ko route: "^#!/search$"
+			// ko if: matches
+			.hide(data-bind="do: disableSections")
+			// /ko
+			// /ko
+
+		script(src="index.js")
+
+
