@@ -24,11 +24,11 @@ class ViewModel
 		@navigation = ko.observable
 			menu: ko.observableArray [
 				new MenuItem "home", "#!/"
-				new MenuItem "top", "#!/top"
+				# new MenuItem "top", "#!/top"
 				new MenuItem "authors", "#!/authors"
 			]
 			right_menu: ko.observableArray [
-				new MenuItem "search", "#!/search"
+				# new MenuItem "search", @hash #"#!/search"
 			]
 		@title = @u "elibrary"
 		@rootView = => @hash() in root_routes
@@ -50,8 +50,66 @@ class ViewModel
 			if local.length
 				result.push local
 			result
+		@searchString = ko.observable ""
 		@sectionFilter = ko.observable {}
-		@authorHref = (index) => "#!/authors/#{index()}"
+		@authorsFiltered = ko.computed => 
+			@hash window.location.hash
+			data.authors.filter_by("name", @sectionFilter, { 'author.sections.in': 1, 'ko.computed.truekeys': 1 })()
+				.filter_by("name", @searchString, { 'regex': 1, 'ko.computed': 1 })()
+		@booksFiltered = ko.computed =>
+			@hash window.location.hash
+			data.books.filter_by("section", @sectionFilter, { 'book.in': 1, 'ko.computed.truekeys': 1 })()
+				.filter_by("title", @searchString, { 'regex': 1, 'ko.computed': 1 })()
+		@authorHref = (index) => "#!/authors/#{index}"
+		@authorNext = (index) => ko.computed => 
+			found = index()
+			@authorsFiltered().forEach (x, i) => 
+				if "#{x.id}" is "#{index()}"
+					found = i
+					found = parseInt(found) + 1
+					found %= @authorsFiltered().length
+			@authorHref @authorsFiltered()[found].id
+		@authorPrev = (index) => ko.computed =>
+			found = index()
+			@authorsFiltered().forEach (x, i) => 
+				if "#{x.id}" is "#{index()}"
+					found = i
+					found = parseInt(found) - 1
+					found += @authorsFiltered().length
+					found %= @authorsFiltered().length
+			@authorHref @authorsFiltered()[found].id
+		@author_active = ko.observable null
+		@authorActiveComputed = {}
+		@authorActive = (index) => 
+			if @authorActiveComputed[index]
+				return @authorActiveComputed[index]
+			res = ko.computed =>
+				x = @hash()
+				return "active" if "#{@author_active()}" is "#{index}"
+				""
+			@authorActiveComputed[index] = res
+			res
+		@authorActivate = (index) => =>
+			unless index
+				return @author_active null
+			@author_active index
+		@authorHashByName = (author) =>
+			for found in data.authors.filter_by "name", author
+				return @authorHref found.id
+			"#!/404"
+		@book_hash = (id) => "#!/books/#{id}"
+		@range = (a, b) => [a...b]
+		@lorem = =>
+			s = "<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim eniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>"
+			res = []
+			for i in @range 0, 30
+				res.push s
+			res.join ""
+		@scrollToTop = =>
+			setTimeout =>
+				$("html, body").animate
+					scrollTop: $("h3").offset().top - 20
+			, 1
 
 ko.bindingHandlers.i18n =
 	init: (element, valueAccessor) ->
@@ -60,6 +118,15 @@ ko.bindingHandlers.i18n =
 			$(element).text value
 		changeValue value()
 		value.subscribe changeValue
+
+ko.bindingHandlers.i18nx =
+	init: (element, valueAccessor) ->
+		for k, v of valueAccessor().attr
+			value = window.model.u v
+			changeValue = (value) ->
+				$(element).attr k, value
+			changeValue value()
+			value.subscribe changeValue
 
 ko.bindingHandlers.do =
 	init: (element, valueAccessor) ->
@@ -83,9 +150,20 @@ ko.bindingHandlers.buttonFilter =
 				options.target target
 			active: (what) -> ko.computed ->
 				target = options.target()
-				# unless target[what]
-				# 	target[what] = true
 				return "btn active" if target[what]
+				"btn"
+			toggleAll: ->
+				all = true
+				target = options.target()
+				for k, v of target when v
+					all = false
+				for k, v of target
+					target[k] = all
+				options.target target
+			anyActive: ->
+				target = options.target()
+				for k, v of target when v
+					return "btn active"
 				"btn"
 		ko.applyBindingsToDescendants innerBindingContext, element
 		binded = true
@@ -94,7 +172,6 @@ ko.bindingHandlers.buttonFilter =
 ko.virtualElements.allowedBindings.route = true
 ko.bindingHandlers.route = 
 	init: (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) ->
-		console.log "init called"
 		# ko route: "^#!/authors/:id$"
 		truthy = -> -> true
 		falsy = -> -> false
@@ -105,20 +182,17 @@ ko.bindingHandlers.route =
 		paramObservables = { matches: ko.observable false }
 		params.forEach (param) ->
 			paramObservables[param[1..]] = ko.observable ""
-		bindingContext = bindingContext.extend paramObservables
-		ko.applyBindingsToDescendants bindingContext, element
+		childBindingContext = bindingContext.createChildContext viewModel
+		ko.utils.extend childBindingContext, paramObservables
+		ko.applyBindingsToDescendants childBindingContext, element
 		conditionAccessor = ->
-			console.log "#{window.model.hash()}", "#{regex}"
-			console.log "checking: #{window.model.hash().match new RegExp regex}"
 			return true if window.model.hash().match new RegExp regex
 			false
 		hashchange = (hash) ->
-			console.log "changed"
 			match = hash.match new RegExp regex
 			if match
 				to_extend = {}
 				params.forEach (param, index) ->
-					console.log param
 					if match[index + 1]
 						paramObservables[param[1..]] match[index + 1]
 					else
@@ -126,7 +200,6 @@ ko.bindingHandlers.route =
 				paramObservables.matches true
 			else
 				paramObservables.matches false
-			console.log bindingContext
 		window.model.hash.subscribe hashchange
 		hashchange window.location.hash
 		{ controlsDescendantBindings: true }

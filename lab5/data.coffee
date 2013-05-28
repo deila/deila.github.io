@@ -3,14 +3,56 @@ window.data =
 	books: []
 	sectionCounters: {}
 	authors: []
+	authorSections: {}
+
+gkeys = (x) -> 
+	key for key of x
+
+truekeys = (x) ->
+	key for key, value of x when value
+
+Array.prototype.gkeys = -> @
+
+Array.prototype.filter_by = (by_what, value, opts) ->
+	wby = (x) -> x[by_what]
+	unless by_what
+		wby = (x) -> x
+	unless opts
+		return @filter (x) -> x[by_what] is value
+	if opts["author.sections.in"]
+		filter = (value) -> (x) -> 
+			flag = false
+			data.authorSections[wby x].forEach (y) -> 
+				return if flag
+				if y in value
+					flag = true
+			flag
+	if opts["book.in"]
+		filter = (value) -> (x) -> wby(x) in value
+	if opts["regex"]
+		filter = (value) -> (x) -> wby(x).match value
+	if opts["ko.computed"]
+		return ko.computed => @filter filter value()
+	if opts["ko.computed.truekeys"]
+		return ko.computed => @filter filter truekeys value()
+	return @filter filter value
+
+book_count = 0
 
 class Book
 	constructor: (@title, @author, @section) ->
+		@id = book_count
+		book_count += 1
 		unless @author in data["authors"]
-			data["authors"].push @author
+			data["authors"].push 
+				name: @author
+				id: data["authors"].length
+			data["authorSections"][@author] = []
 		unless @section in data["sections"]
 			data["sections"].push @section
 			data["sectionCounters"][@section] = 0
+		unless @section in data["authorSections"][@author]
+			data["authorSections"][@author].push @section
 		data["sectionCounters"][@section] += 1
 
 data["books"] = [

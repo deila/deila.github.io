@@ -51,8 +51,8 @@
         });
       };
       this.navigation = ko.observable({
-        menu: ko.observableArray([new MenuItem("home", "#!/"), new MenuItem("top", "#!/top"), new MenuItem("authors", "#!/authors")]),
-        right_menu: ko.observableArray([new MenuItem("search", "#!/search")])
+        menu: ko.observableArray([new MenuItem("home", "#!/"), new MenuItem("authors", "#!/authors")]),
+        right_menu: ko.observableArray([])
       });
       this.title = this.u("elibrary");
       this.rootView = function() {
@@ -92,9 +92,130 @@
         }
         return result;
       };
+      this.searchString = ko.observable("");
       this.sectionFilter = ko.observable({});
+      this.authorsFiltered = ko.computed(function() {
+        _this.hash(window.location.hash);
+        return data.authors.filter_by("name", _this.sectionFilter, {
+          'author.sections.in': 1,
+          'ko.computed.truekeys': 1
+        })().filter_by("name", _this.searchString, {
+          'regex': 1,
+          'ko.computed': 1
+        })();
+      });
+      this.booksFiltered = ko.computed(function() {
+        _this.hash(window.location.hash);
+        return data.books.filter_by("section", _this.sectionFilter, {
+          'book.in': 1,
+          'ko.computed.truekeys': 1
+        })().filter_by("title", _this.searchString, {
+          'regex': 1,
+          'ko.computed': 1
+        })();
+      });
       this.authorHref = function(index) {
-        return "#!/authors/" + (index());
+        return "#!/authors/" + index;
+      };
+      this.authorNext = function(index) {
+        return ko.computed(function() {
+          var found;
+
+          found = index();
+          _this.authorsFiltered().forEach(function(x, i) {
+            if (("" + x.id) === ("" + (index()))) {
+              found = i;
+              found = parseInt(found) + 1;
+              return found %= _this.authorsFiltered().length;
+            }
+          });
+          return _this.authorHref(_this.authorsFiltered()[found].id);
+        });
+      };
+      this.authorPrev = function(index) {
+        return ko.computed(function() {
+          var found;
+
+          found = index();
+          _this.authorsFiltered().forEach(function(x, i) {
+            if (("" + x.id) === ("" + (index()))) {
+              found = i;
+              found = parseInt(found) - 1;
+              found += _this.authorsFiltered().length;
+              return found %= _this.authorsFiltered().length;
+            }
+          });
+          return _this.authorHref(_this.authorsFiltered()[found].id);
+        });
+      };
+      this.author_active = ko.observable(null);
+      this.authorActiveComputed = {};
+      this.authorActive = function(index) {
+        var res;
+
+        if (_this.authorActiveComputed[index]) {
+          return _this.authorActiveComputed[index];
+        }
+        res = ko.computed(function() {
+          var x;
+
+          x = _this.hash();
+          if (("" + (_this.author_active())) === ("" + index)) {
+            return "active";
+          }
+          return "";
+        });
+        _this.authorActiveComputed[index] = res;
+        return res;
+      };
+      this.authorActivate = function(index) {
+        return function() {
+          if (!index) {
+            return _this.author_active(null);
+          }
+          return _this.author_active(index);
+        };
+      };
+      this.authorHashByName = function(author) {
+        var found, _i, _len, _ref;
+
+        _ref = data.authors.filter_by("name", author);
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          found = _ref[_i];
+          return _this.authorHref(found.id);
+        }
+        return "#!/404";
+      };
+      this.book_hash = function(id) {
+        return "#!/books/" + id;
+      };
+      this.range = function(a, b) {
+        var _i, _results;
+
+        return (function() {
+          _results = [];
+          for (var _i = a; a <= b ? _i < b : _i > b; a <= b ? _i++ : _i--){ _results.push(_i); }
+          return _results;
+        }).apply(this);
+      };
+      this.lorem = function() {
+        var i, res, s, _i, _len, _ref;
+
+        s = "<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim eniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>";
+        res = [];
+        _ref = _this.range(0, 30);
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          i = _ref[_i];
+          res.push(s);
+        }
+        return res.join("");
+      };
+      this.scrollToTop = function() {
+        return setTimeout(function() {
+          return $("html, body").animate({
+            scrollTop: $("h3").offset().top - 20
+          });
+        }, 1);
       };
     }
 
@@ -112,6 +233,25 @@
       };
       changeValue(value());
       return value.subscribe(changeValue);
+    }
+  };
+
+  ko.bindingHandlers.i18nx = {
+    init: function(element, valueAccessor) {
+      var changeValue, k, v, value, _ref, _results;
+
+      _ref = valueAccessor().attr;
+      _results = [];
+      for (k in _ref) {
+        v = _ref[k];
+        value = window.model.u(v);
+        changeValue = function(value) {
+          return $(element).attr(k, value);
+        };
+        changeValue(value());
+        _results.push(value.subscribe(changeValue));
+      }
+      return _results;
     }
   };
 
@@ -156,6 +296,35 @@
             }
             return "btn";
           });
+        },
+        toggleAll: function() {
+          var all, k, v;
+
+          all = true;
+          target = options.target();
+          for (k in target) {
+            v = target[k];
+            if (v) {
+              all = false;
+            }
+          }
+          for (k in target) {
+            v = target[k];
+            target[k] = all;
+          }
+          return options.target(target);
+        },
+        anyActive: function() {
+          var k, v;
+
+          target = options.target();
+          for (k in target) {
+            v = target[k];
+            if (v) {
+              return "btn active";
+            }
+          }
+          return "btn";
         }
       });
       ko.applyBindingsToDescendants(innerBindingContext, element);
@@ -170,9 +339,8 @@
 
   ko.bindingHandlers.route = {
     init: function(element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
-      var conditionAccessor, falsy, hashchange, paramObservables, params, regex, truthy;
+      var childBindingContext, conditionAccessor, falsy, hashchange, paramObservables, params, regex, truthy;
 
-      console.log("init called");
       truthy = function() {
         return function() {
           return true;
@@ -193,11 +361,10 @@
       params.forEach(function(param) {
         return paramObservables[param.slice(1)] = ko.observable("");
       });
-      bindingContext = bindingContext.extend(paramObservables);
-      ko.applyBindingsToDescendants(bindingContext, element);
+      childBindingContext = bindingContext.createChildContext(viewModel);
+      ko.utils.extend(childBindingContext, paramObservables);
+      ko.applyBindingsToDescendants(childBindingContext, element);
       conditionAccessor = function() {
-        console.log("" + (window.model.hash()), "" + regex);
-        console.log("checking: " + (window.model.hash().match(new RegExp(regex))));
         if (window.model.hash().match(new RegExp(regex))) {
           return true;
         }
@@ -206,23 +373,20 @@
       hashchange = function(hash) {
         var match, to_extend;
 
-        console.log("changed");
         match = hash.match(new RegExp(regex));
         if (match) {
           to_extend = {};
           params.forEach(function(param, index) {
-            console.log(param);
             if (match[index + 1]) {
               return paramObservables[param.slice(1)](match[index + 1]);
             } else {
               return paramObservables[param.slice(1)]("");
             }
           });
-          paramObservables.matches(true);
+          return paramObservables.matches(true);
         } else {
-          paramObservables.matches(false);
+          return paramObservables.matches(false);
         }
-        return console.log(bindingContext);
       };
       window.model.hash.subscribe(hashchange);
       hashchange(window.location.hash);

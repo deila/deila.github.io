@@ -15,9 +15,12 @@ html
 					ul.nav(data-bind="foreach: navigation().menu")
 						li(data-bind="attr: { class: active }")
 							a(data-bind="text: title, attr: { href: route }")
-					ul.nav.pull-right(data-bind="foreach: navigation().right_menu")
-						li(data-bind="attr: { class: active }")
-							a(data-bind="text: title, attr: { href: route }")
+					div.pull-right
+						ul.nav(data-bind="foreach: navigation().right_menu")
+							li(data-bind="attr: { class: active }")
+								a(data-bind="text: title, attr: { href: route }")
+						form.navbar-search
+							input.search-query(type="text", data-bind="value: searchString, i18nx: { attr: { placeholder: 'search' } }")
 
 		.container-fluid
 			.row
@@ -26,63 +29,111 @@ html
 					.well#sections(data-bind="visible: sectionsActive")
 						button.btn.btn-well(data-bind="i18n: 'sections', click: disableSections")
 						div(data-bind="buttonFilter: { data: data.sections, target: sectionFilter, all: true }")
+							.row-fluid
+								.btn-group
+									button.btn(data-bind="i18n: 'all', click: toggleAll, attr: { class: anyActive() }")
 							.row-fluid(data-bind="foreach: foreach_by(data.sections, 3)")
 								.btn-group(data-bind="foreach: $data")
 									button.btn(data-bind="i18n: $data, attr: { class: active($data) }, click: toggle($data)")
 			hr
 
+			// ko route: "^#!/search$"
+			// ko if: matches
+			.hide(data-bind="do: disableSections")
+			input(type="text", data-bind="value: searchString")
+			// /ko
+			// /ko
 
 			// ko if: rootView()
 			.hide(data-bind="do: enableSections")
+			h3(data-bind="i18n: 'books'")
+			table.table.table-striped
+				thead
+					th(data-bind="i18n: 'book_title'")
+					th(data-bind="i18n: 'section'")
+					th(data-bind="i18n: 'author'")
+					th(data-bind="i18n: 'actions'")
+				tbody(data-bind="foreach: booksFiltered")
+					tr
+						td
+							a(data-bind="text: title, attr: { href: $parent.book_hash(id) }")
+						td
+							span(data-bind="i18n: section")
+						td
+							a(data-bind="text: author, attr: { href: $parent.authorHashByName(author) }")
+						td
+							a(data-bind="i18n: 'action_read', attr: { href: $parent.book_hash(id) }")
 			// /ko
 
-			// ko route: "^#!/top$"
+			// ko route: "^#!/404$"
 			// ko if: matches
 			.hide(data-bind="do: disableSections")
-			| top
+			| Not found :(
 			// /ko
 			// /ko
+
+			// ko route: "^#!/books/:id"
+			// ko if: matches
+			.hide(data-bind="do: disableSections")
+			.hide(data-bind="do: scrollToTop")
+			// ko foreach: data.books.filter_by("id", parseInt(id()))
+			em.pull-right(data-bind="text: author")
+			h3(data-bind="text: title")
+			div(data-bind="html: $parent.lorem()")
+			// /ko
+			// /ko
+			// /ko
+			
 
 			// ko route: "^#!/authors"
 			// ko if: matches
 			.hide(data-bind="do: disableSections")
 			.row-fluid
-				.span3.well
+				.span4.well
 					ul.nav.nav-list
 						li.nav-header(data-bind="i18n: 'authors'")
-						// ko foreach: data.authors
-						li
-							a(data-bind="text: $data, attr: { href: $parent.authorHref($index) }")
+						// ko foreach: authorsFiltered
+						li(data-bind="attr: { class: $parent.authorActive(id) }")
+							a(data-bind="text: name, attr: { href: $parent.authorHref(id) }")
 						// /ko
-				.span9
+				.span8
 					// ko route: "^#!/authors/:id$"
 					// ko if: matches
-					h3(data-bind="text: data.authors[id()]")
+					// ko ifnot: authorActive(id())()
+					.hide(data-bind="do: scrollToTop")
+					.hide(data-bind="do: authorActivate(id())")
+					// /ko
+					.btn-group.pull-right
+						a.btn(data-bind="i18n: 'prev', attr: { href: authorPrev(id) }")
+						a.btn(data-bind="i18n: 'next', attr: { href: authorNext(id) }")
+					// ko with: data.authors[id()]
+					h3(data-bind="text: name")
 					table.table.table-striped
 						thead
-							th(data-bind="i18n: book_title")
-							th(data-bind="i18n: section")
-							th(data-bind="i18n: author")
-							th(data-bind="i18n: actions")
-						tbody(data-bind="foreach: data.books")
-							// ko if: author == $parent.data.authors[$parent.id()]
+							th(data-bind="i18n: 'book_title'")
+							th(data-bind="i18n: 'section'")
+							th(data-bind="i18n: 'author'")
+							th(data-bind="i18n: 'actions'")
+						tbody(data-bind="foreach: data.books.filter_by('author', name)")
 							tr
 								td
-							// /ko
-
+									a(data-bind="text: title, attr: { href: $root.book_hash(id) }")
+								td
+									span(data-bind="i18n: section")
+								td
+									a(data-bind="text: author, attr: { href: $root.authorHashByName(author) }")
+								td
+									a(data-bind="i18n: 'action_read', attr: { href: $root.book_hash(id) }")
+					// /ko
 					// /ko
 					// ko ifnot: matches
+					.hide(data-bind="do: authorActivate(null)")
 					em(data-bind="i18n: 'choose_author_please'")
 					// /ko
 					// /ko
 			// /ko
 			// /ko
 
-			// ko route: "^#!/search$"
-			// ko if: matches
-			.hide(data-bind="do: disableSections")
-			// /ko
-			// /ko
 
 		script(src="index.js")
 
