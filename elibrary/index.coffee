@@ -9,8 +9,13 @@ class MenuItem
 			return "active" if hash in root_routes and @route in root_routes
 			""
 
+# модель данных
 class ViewModel
 	constructor: ->
+		# делаем модель глобальной и синглтоном (создается только 1 раз)
+		# window.что-то — глобальная переменная
+		# @ = this — текущий объект класса
+		# обращение @что-то — this.что-то
 		window.model = @
 		@hash = ko.observable window.location.hash
 		$(window).on "hashchange", => @hash window.location.hash
@@ -21,6 +26,27 @@ class ViewModel
 				console.log "[warning] no translation: #{to_translate}"
 				return to_translate
 			translations[@language()][to_translate]	
+		# ko — библиотека KnockoutJS
+		# ko.observable — метод, возвращающий наблюдаемую переменную
+		# JSON: объект в javascript
+		# пример:
+		# x = { hello: "world", a: 1, b: "ccca", inner: { bga: "test" } }
+		# тоже, только красивее
+		# x = {
+		# 	hello: "world", 
+		# 	a: 1, 
+		# 	b: "ccca", 
+		# 	inner: { 
+		# 		bga: "test" 
+		# 	} 
+		# }
+		# а в coffeescript:
+		# x = 
+		# 	hello: "world"
+		# 	a: 1
+		# 	b: "ccca"
+		# 	inner:
+		# 		bga: "test"
 		@navigation = ko.observable
 			menu: ko.observableArray [
 				new MenuItem "home", "#!/"

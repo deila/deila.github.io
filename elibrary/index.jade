@@ -1,13 +1,20 @@
 !!!
 html
 	head
+		//- кодировка (для русского языка)
 		meta(charset="utf-8")
+		//- загрузка стилей
 		link(href="style.css", rel="stylesheet", type="text/css")
+		//- загрузка библиотек jQuery, Knockoutjs — MVVM framework
 		script(src="jquery.js")
 		script(src="ko.js")
+		//- локализации
 		script(src="translations.js")
+		//- данные о книжках
 		script(src="data.js")
 	body(style="display: none;")
+		//- заголовок страницы
+		//- data-bind — привязка места в html к данным в памяти (в модели данных) (фишка KnockoutJS)
 		title(data-bind="text: title")
 		.navbar
 			.navbar-inner
