@@ -151,3 +151,16 @@ html
 				.span11
 				.span1
 					a(href="https://github.com/deila/deila.github.io/tree/master/elibrary") Code on github
+
+		:coffeescript
+			_gauges = window._gauges || []
+			fun = ->
+				t = document.createElement 'script'
+				t.type = 'text/javascript'
+				t.async = true
+				t.id = 'gauges-tracker'
+				t.setAttribute 'data-site-id', '51af52a6108d7b777e0000ff'
+				t.src = '//secure.gaug.es/track.js'
+				s = document.getElementByTagName('script')[0]
+				s.parentNode.insertBefore t, s
+			fun()
