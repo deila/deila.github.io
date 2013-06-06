@@ -3,4 +3,6 @@ deila.github.io
 
 public static site
 
-just push it already!!
+just push it already!
+
+publish NOW!
