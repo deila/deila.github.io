@@ -13,7 +13,7 @@
     t.id = 'gauges-tracker';
     t.setAttribute('data-site-id', '51af52a6108d7b777e0000ff');
     t.src = '//secure.gaug.es/track.js';
-    s = document.getElementByTagName('script')[0];
+    s = document.getElementsByTagName('script')[0];
     return s.parentNode.insertBefore(t, s);
   };
 
